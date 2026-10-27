@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Facade;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,11 +15,17 @@ $app = Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // منع Laravel من محاولة عرض قوالب الـ Blade المعطوبة في حال حدوث خطأ مبكر
+        $exceptions->shouldRenderJsonWhen(function ($request, Throwable $e) {
+            return true;
+        });
     })->create();
 
-// إذا كنا في بيئة Vercel السحابية، اجعل التخزين في /tmp
-if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || is_dir('/tmp')) {
+// 1. ربط الـ Facades فوراً بالحاوية لمنع خطأ Facade root
+Facade::setFacadeApplication($app);
+
+// 2. توجيه مجلد التخزين إلى /tmp في بيئة Vercel
+if (is_dir('/tmp')) {
     $app->useStoragePath('/tmp/storage');
 }
 

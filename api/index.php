@@ -2,7 +2,7 @@
 
 define('LARAVEL_START', microtime(true));
 
-// تجهيز مسارات /tmp للكتابة المؤقتة
+// إنشاء المسارات المؤقتة
 $storagePath = '/tmp/storage';
 $dirs = [
     $storagePath . '/framework/views',
@@ -17,7 +17,7 @@ foreach ($dirs as $dir) {
     }
 }
 
-// ضبط بيئة العمل إجبارياً
+// ضبط بيئة التشغيل
 putenv('VIEW_COMPILED_PATH=' . $storagePath . '/framework/views');
 putenv('LOG_CHANNEL=stderr');
 putenv('SESSION_DRIVER=cookie');
@@ -27,14 +27,18 @@ $_ENV['LOG_CHANNEL'] = 'stderr';
 $_ENV['SESSION_DRIVER'] = 'cookie';
 $_ENV['CACHE_STORE'] = 'array';
 
-// استدعاء autoload والإقلاع
-require __DIR__ . '/../vendor/autoload.php';
+try {
+    require __DIR__ . '/../vendor/autoload.php';
+    $app = require_once __DIR__ . '/../bootstrap/app.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
-
-$app->useStoragePath($storagePath);
-
-// معالجة الطلب
-$request = Illuminate\Http\Request::capture();
-$response = $app->handleRequest($request);
-$response->send();
+    $request = Illuminate\Http\Request::capture();
+    $response = $app->handleRequest($request);
+    $response->send();
+} catch (\Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "=== Laravel Boot Error ===\n\n";
+    echo "Message: " . $e->getMessage() . "\n";
+    echo "File: " . $e->getFile() . " (Line: " . $e->getLine() . ")\n\n";
+    echo "Stack Trace:\n" . $e->getTraceAsString();
+}   
