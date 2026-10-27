@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// 1. تجهيز مجلد التخزين المؤقت في /tmp المسموح بالقراءة والكتابة
+// 1. إنشاء مسارات التخزين المؤقتة المسموح بالكتابة فيها داخل /tmp
 $storagePath = '/tmp/storage';
 $dirs = [
     $storagePath . '/framework/views',
@@ -19,25 +19,28 @@ foreach ($dirs as $dir) {
     }
 }
 
-// 2. تحميل ملفات composer
-require __DIR__ . '/../vendor/autoload.php';
-
-// 3. إقلاع التطبيق
-$app = require_once __DIR__ . '/../bootstrap/app.php';
-
-// 4. إجبار لارافيل على استخدام /tmp لمسار storage بالكامل لمنع Read-only filesystem
-$app->useStoragePath($storagePath);
-
-// 5. ضبط قناة التسجيل الافتراضية لمنع خطأ trim(null)
+// 2. ضبط المتغيرات الأساسية لمنع محاولة القراءة من disk logs وخطأ trim
 putenv('LOG_CHANNEL=stderr');
+putenv('VIEW_COMPILED_PATH=' . $storagePath . '/framework/views');
+putenv('APP_CONFIG_CACHE=/tmp/config.php');
+putenv('APP_EVENTS_CACHE=/tmp/events.php');
+putenv('APP_PACKAGES_CACHE=/tmp/packages.php');
+putenv('APP_ROUTES_CACHE=/tmp/routes.php');
+putenv('APP_SERVICES_CACHE=/tmp/services.php');
+
 $_ENV['LOG_CHANNEL'] = 'stderr';
 $_SERVER['LOG_CHANNEL'] = 'stderr';
 
-// 6. تشغيل ومعالجة الطلب
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+// 3. استدعاء autoload
+require __DIR__ . '/../vendor/autoload.php';
 
-$response = $kernel->handle(
-    $request = Request::capture()
-)->send();
+// 4. إقلاع التطبيق الرسمي لـ Laravel 11 وتعيين مسار storage
+$app = require_once __DIR__ . '/../bootstrap/app.php';
 
-$kernel->terminate($request, $response);
+$app->useStoragePath($storagePath);
+
+// 5. تهيئة الـ Facades رسمياً لمنع خطأ Facade root
+\Illuminate\Support\Facades\Facade::setFacadeApplication($app);
+
+// 6. معالجة الطلب عبر نمط Laravel 11 القياسي
+$app->handleRequest(Request::capture());
