@@ -14,11 +14,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         //
     })
-    ->withExceptions(function (Exceptions $exceptions) {
-        // منع Laravel من محاولة عرض قوالب الـ Blade المعطوبة في حال حدوث خطأ مبكر
-        $exceptions->shouldRenderJsonWhen(function ($request, Throwable $e) {
-            return true;
-        });
+   ->withExceptions(function (Exceptions $exceptions) {
+    //
     })->create();
 
 // 1. ربط الـ Facades فوراً بالحاوية لمنع خطأ Facade root
